@@ -9,8 +9,7 @@ def on_connect(client, userdata, flags, rc):
 def on_message(client, userdata, msg):
     dutycycle = int(msg.payload.decode("utf-8"))
     if (msg.topic == "dutycycle"):
-        print("dutycycle received")
-        # i2c_send(dutycycle)
+        i2c_send(dutycycle)
 
 
 
