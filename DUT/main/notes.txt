@@ -1,0 +1,15 @@
+mpu6050_get_acce
+
+i2c_port_t mpu6050_config = {
+.mode = 
+.sda_io_num
+.scl_io_num
+sda_pullup_en
+scl_pullup_en
+clk_speed
+
+
+
+
+};
+mpu6050_handle_t mpu_6050 = mpu6050_create(, device address )
