@@ -6,3 +6,4 @@
 /DUT/.idea
 /DUT/build
 /MQTT/__pycache__
+DUT/espidf_source.bat

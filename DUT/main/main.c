@@ -11,10 +11,20 @@
 #include "freertos/semphr.h"
 #include "driver/ledc.h"
 #include "driver/i2c_slave.h"
+#include "include/mpu6050.h"
+#include "driver/i2c_master.h"
+#include "driver/i2c.h" //using legacy driver for i2c since mpu6050 driver uses the old version
 
 //I2C Define
 #define I2C_SLAVE_SDA_IO   11
 #define I2C_SLAVE_SCL_IO   12
+
+//MPU6050 Define
+#define I2C_MASTER_SDA_IO   37
+#define I2C_MASTER_SCL_IO   38
+
+
+
 
 static QueueHandle_t i2c_event_queue;
 
@@ -24,6 +34,21 @@ static QueueHandle_t i2c_event_queue;
 #define PWM_FREQ 20000
 #define PWM_RES  LEDC_TIMER_10_BIT
 #define PWM_MAX  1023
+
+void pollMPUSensorData (void * args)
+{
+    mpu6050_handle_t mpu = (mpu6050_handle_t)args;
+    while(1)
+    {
+        printf("pollMPUSensorData\n");
+        mpu6050_acce_value_t acce_value;
+        mpu6050_get_acce(mpu, &acce_value);
+        printf("%0.3f\n",acce_value.acce_x);
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+}
+
+
 
 
 //Handles changing the PWM
@@ -130,5 +155,12 @@ void app_main(void)
 {
     motors_init();
     i2c_slave_init();
+
+    mpu6050_handle_t mpu6050 = mpu6050_create(I2C_NUM_1,0x68);
+    mpu6050_wake_up(mpu6050);
+    mpu6050_config(mpu6050, ACCE_FS_4G,GYRO_FS_500DPS);
+
     xTaskCreate(process_i2c, "i2c_task", 4096, i2c_event_queue, 10, NULL);
+    // I don't know as much on the stack size (review over https://www.freertos.org/Why-FreeRTOS/FAQs/Memory-usage-boot-times-context#how-big-should-the-stack-be)
+    xTaskCreate(pollMPUSensorData,"Poll_Accel", 2048, mpu6050,9 , NULL );
 }
