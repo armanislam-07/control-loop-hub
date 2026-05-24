@@ -74,6 +74,9 @@ static void process_i2c( void *arg)
        if (xQueueReceive(i2c_event_queue, &evt, portMAX_DELAY) == pdTRUE) {
            /* issue : i am using less than 25% of the PWM range | we can scale by doing pkt.data[0] * pwm_max / 255
             */
+           // evt.buffer[0] << 8 | evt.buffer[1]
+           //before accesing the bytes check the packet length
+           //if the size is greater than 2 do the thing above then do duty cyecle of the speed
            dutyCycle(evt.buffer[0]); // check if the buffer includes the 0 bit for reading or is it just the data
 
        }

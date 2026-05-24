@@ -2,10 +2,21 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 from PySide6.QtCore import QFile, QIODevice
 from PySide6.QtUiTools import QUiLoader
 from MQTT.mqtt_pub import publishMQTT
+from mplwidget import MplWidget
+
+
+class Loader(QUiLoader):
+    def createWidget(self, className, parent=None, name=""):
+        if className == "MplWidget":
+            widget = MplWidget(parent)
+            widget.setObjectName(name)
+            return widget
+        return super().createWidget(className, parent, name)
+
 
 app = QApplication()
 
-loader = QUiLoader()
+loader = Loader()
 file = QFile("main.ui")
 file.open(QFile.ReadOnly)
 
