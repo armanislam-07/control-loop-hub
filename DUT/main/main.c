@@ -13,7 +13,6 @@
 #include "driver/i2c_slave.h"
 #include "include/mpu6050.h"
 #include "driver/i2c_master.h"
-#include "driver/i2c.h" //using legacy driver for i2c since mpu6050 driver uses the old version
 
 //I2C Define
 #define I2C_SLAVE_SDA_IO   11
@@ -40,11 +39,15 @@ void pollMPUSensorData (void * args)
     mpu6050_handle_t mpu = (mpu6050_handle_t)args;
     while(1)
     {
-        printf("pollMPUSensorData\n");
-        mpu6050_acce_value_t acce_value;
-        mpu6050_get_acce(mpu, &acce_value);
-        printf("%0.3f\n",acce_value.acce_x);
+        mpu6050_temp_value_t temp_value;
+        mpu6050_get_temp(mpu, &temp_value);
+        printf("%0.3f\n", temp_value.temp);
         vTaskDelay(pdMS_TO_TICKS(1000));
+        /*
+         *i2c slave cant send information to master without request (maybe switch to SPI)
+         *if want to keep i2c (connect extra pin to pi and have that act as the "interrupt pin"
+         *or do dual role i2c / multi master
+         */
     }
 }
 
@@ -69,7 +72,10 @@ static void process_i2c( void *arg)
     while(1)
     {
        if (xQueueReceive(i2c_event_queue, &evt, portMAX_DELAY) == pdTRUE) {
+           /* issue : i am using less than 25% of the PWM range | we can scale by doing pkt.data[0] * pwm_max / 255
+            */
            dutyCycle(evt.buffer[0]); // check if the buffer includes the 0 bit for reading or is it just the data
+
        }
     }
 }
@@ -118,6 +124,12 @@ void motors_init(void)
 }
 
 static bool IRAM_ATTR on_receive(i2c_slave_dev_handle_t i2c_slave, const i2c_slave_rx_done_event_data_t *evt_data, void *arg){
+
+    /*Issue: i am copying the struct into the queue but not the actual data the buffer has | can cause issues maybe later down the road due to random error
+     *use memcpy to fix this
+     *create a packet struct then mmcpy anddo &datapcket
+     */
+
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     xQueueSendFromISR(i2c_event_queue, evt_data, &xHigherPriorityTaskWoken);
     return xHigherPriorityTaskWoken; //look up how to utilize this //return false | you return true if you want a higher task to be woken up
@@ -162,5 +174,5 @@ void app_main(void)
 
     xTaskCreate(process_i2c, "i2c_task", 4096, i2c_event_queue, 10, NULL);
     // I don't know as much on the stack size (review over https://www.freertos.org/Why-FreeRTOS/FAQs/Memory-usage-boot-times-context#how-big-should-the-stack-be)
-    xTaskCreate(pollMPUSensorData,"Poll_Accel", 2048, mpu6050,9 , NULL );
+    xTaskCreate(pollMPUSensorData,"Poll_Accel", 4096, mpu6050,9 , NULL );
 }
